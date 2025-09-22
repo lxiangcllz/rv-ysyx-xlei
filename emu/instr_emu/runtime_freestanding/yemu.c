@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "yemu.h"
 
 uint32_t R[32], PC;
-uint8_t M[1024]; // memory buffer for generated instructions
+uint8_t M[MSIZE]; // memory buffer for generated instructions
 bool halt = false;
 
 void inst_cycle() {
@@ -26,7 +27,7 @@ void inst_cycle() {
 int main(int argc, char** argv) {
 	PC = 0; R[0] = 0; // can be omitted since uninitialized global variables are initialized with 0
 	FILE* fp = fopen(argv[1], "r");
-	fread(M, 1, 1024, fp);
+	fread(M, 1, MSIZE, fp);
 	fclose(fp);
 	while (!halt) { inst_cycle(); }
 	return 0;

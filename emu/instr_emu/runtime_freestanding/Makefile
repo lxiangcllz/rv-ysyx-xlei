@@ -7,8 +7,11 @@ prog.bin: prog
 emu: prog.bin yemu.c
 	gcc -o yemu yemu.c && ./yemu prog.bin
 
+emu2: prog.bin yemu2.c
+	gcc -o yemu2 yemu2.c && ./yemu2 prog.bin
+
 disasm:
 	riscv64-linux-gnu-objdump -M no-aliases -d prog
 
 clean:
-	-rm prog prog.bin yemu
+	-rm prog prog.bin yemu yemu2
