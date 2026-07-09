@@ -1,0 +1,8 @@
+#ifndef STACK_H
+#define STACK_H
+
+extern void push(char); // 'extern' can be omitted.
+extern char pop(void);
+extern int is_empty(void);
+
+#endif // STACK_H
