@@ -2,43 +2,52 @@ lexical_analysis:
 	clang -fsyntax-only -Xclang -dump-tokens a.c 2> lex_tokens.txt
 
 syntax_analysis:
-	clang -fsyntax-only -Xclang -ast-dump a.c
+	clang -fsyntax-only -Xclang -ast-dump=json a.c > ast.json
 
 static_analysis:
 	clang use_after_free.c --analyze -Xanalyzer -analyzer-output=text
 
-IR_dump:
-	clang -S -emit-llvm a.c
+llvmIR:
+	clang -S -emit-llvm a.c > a.ll 2>&1
+IR_dump: llvmIR
 
 optimize:
-	#clang -S -foptimization-record-file=- a.c
-	clang -S -foptimization-record-file=- a.c -O1
+	#clang -S -foptimization-record-file=- a.c -O1
+	clang -S -emit-llvm -O1 a.c > a.ll 2>&1 -ftime-report
 
-obj_dump:
+optimize_report:
+	clang -S -emit-llvm -O1 a.c -ftime-report
+
+rv_asm:
 	clang -S a.c --target=riscv64-linux-gnu
 	#riscv64-linux-gnu-gcc -S a.c
+codegen: rv_asm
 
-time_report:
-	clang -S a.c -ftime-report
+codegen_opt:
+	clang -S -O1 a.c --target=riscv64-linux-gnu
 
-asm:
-	riscv64-linux-gnu-gcc -c a.c
-	#alias rv32gcc="riscv64-linux-gnu-gcc -march=rv32g -mabi=ilp32"
-	#gcc -c a.c
+rv_obj:
+	clang -c --target=riscv64-linux-gnu a.c
+	#riscv64-linux-gnu-gcc -c a.c
 
 disasm:
-	#objdump -d a.o
-	#riscv64-linux-gnu-objdump -d a.o
-	#alias rvobjdump="riscv64-linux-gnu-objdump"
-	llvm-objdump-14 -d a.o
+	riscv64-linux-gnu-objdump -d a.o
+	#llvm-objdump-14 -d a.o
 
-link:
-	#gcc a.c
-	#gcc a.c --verbose
+rv_exe:
+	riscv64-linux-gnu-gcc a.c --verbose
+	# clang a.c --target=riscv64-linux-gnu
 	#gcc a.c --verbose 2>&1 | tail -n 2 | head -n 1 | tr ' ' '\n' | grep \.o$
-	riscv64-linux-gnu-gcc a.c
 
 exec:
+	#apt-get install qemu-user qemu-user-binfmt
 	#mkdir -p /etc/qemu-binfmt
 	#ln -s /usr/riscv64-linux-gnu/ /etc/qemu-binfmt/riscv64
 	./a.out # it actually executes in qemu.
+
+running_trace:
+	strace ./a.out
+
+.PHONY: clean
+clean:
+	rm -rf lex_tokens.txt ast.json a.ll a.s a.o a.out
