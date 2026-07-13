@@ -18,9 +18,11 @@
 #define Perror(cond, format, ...) \
   Assert(cond, format ": %s", ## __VA_ARGS__, strerror(errno))
 
-#define MSIZE 1024
+#define MSIZE 296512
 
 extern uint32_t R[16], PC;
 extern uint8_t M[MSIZE];
+
+void load_mem(const char *path);
 
 #endif
