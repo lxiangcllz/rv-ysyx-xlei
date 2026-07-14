@@ -17,6 +17,13 @@ void load_mem(const char *path) {
   Assert(ret == fsize, "Fail to load the whole program");
   fclose(fp);
 }
+
+#define HALT_ADDR 0x224
+#define EBREAK_INST 0x00100073
+
+void patch_halt_ebreak(void) {
+  *(uint32_t *)&M[HALT_ADDR] = EBREAK_INST;
+}
 // simple test case for addi/jalr
 //uint8_t M[MSIZE] = { 
 //  0x13,0x05,0x40,0x01,
@@ -59,12 +66,15 @@ typedef union {
   uint32_t bytes;
 } inst_t;
 
-void inst_cycle() {
+int inst_cycle() {
   inst_t inst = *(inst_t *)&M[PC];
-  uint32_t I_imm = (int32_t)(inst.I.imm);
+  int32_t I_imm = (int32_t)inst.bytes >> 20;
   uint32_t U_imm = inst.U.imm << 12;
-  uint32_t S_imm = (int32_t)((inst.S.imm11_5 << 5) | inst.S.imm4_0);
-  uint32_t* paddr = (uint32_t*)&M[inst.S.rs1 + S_imm];
+  int32_t S_imm = (int32_t)(((inst.bytes >> 25) << 5) | ((inst.bytes >> 7) & 0x1f));
+  S_imm = (S_imm << 20) >> 20;
+  uint32_t I_addr = R[inst.I.rs1] + I_imm;
+  uint32_t S_addr = R[inst.S.rs1] + S_imm;
+  uint32_t* S_mem = (uint32_t*)&M[S_addr];
   switch (inst.bytes & 0x7f) {
     case 0b0110011: // add(R)
       if (inst.R.rd != 0)
@@ -74,18 +84,20 @@ void inst_cycle() {
       if (inst.R.rd != 0)
         R[inst.I.rd] = R[inst.I.rs1] + I_imm;
       break;
-    case 0b1100111: // jalr(I)
-      if (inst.R.rd != 0)
+    case 0b1100111: { // jalr(I)
+      uint32_t target = R[inst.I.rs1] + I_imm;
+      if (inst.I.rd != 0)
         R[inst.I.rd] = PC + 4;
-      PC = R[inst.I.rs1] + I_imm;
-      return;
+      PC = target;
+      return 1;
+    }
     case 0b0000011: // lw/lbu(I)
       switch (inst.I.funct3) {
         case 0b010: // lw
-          R[inst.I.rd] = *(uint32_t*)&M[inst.I.rs1 + I_imm];
+          R[inst.I.rd] = *(uint32_t*)&M[I_addr];
           break;
         case 0b100: // lbu
-          R[inst.I.rd] = M[inst.I.rs1 + I_imm];
+          R[inst.I.rd] = M[I_addr];
           break;
         default: printf("Unsupported instruction\n"); break;
       }
@@ -96,15 +108,21 @@ void inst_cycle() {
     case 0b0100011: // sw/sb(S)
       switch (inst.S.funct3) {
         case 0b010: // sw
-          *paddr = R[inst.S.rs2];
+          *S_mem = R[inst.S.rs2];
           break;
         case 0b000: // sb
-          M[inst.S.rs1 + S_imm] = R[inst.S.rs2];
+          M[S_addr] = R[inst.S.rs2];
           break;
         default: printf("Unsupported instruction\n"); break;
       }
       break;
+    case 0b1110011: // ebreak
+      if (inst.bytes == EBREAK_INST)
+        return 0;
+      printf("Unsupported instruction\n");
+      break;
     default: printf("Unsupported instruction\n"); break;
   }
   PC += 4;
+  return 1;
 }
