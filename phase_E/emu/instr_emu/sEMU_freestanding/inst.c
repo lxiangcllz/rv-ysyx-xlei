@@ -3,8 +3,46 @@
 
 uint32_t R[16], PC;
 uint8_t M[MSIZE];
+uint32_t vga_fb[VGA_SIZE / 4];
+
+static void store_word(uint32_t addr, uint32_t data) {
+  if (addr >= VGA_BASE && addr + 4 <= VGA_BASE + VGA_SIZE) {
+    vga_fb[(addr - VGA_BASE) / 4] = data;
+  } else if (addr + 4 <= MSIZE) {
+    *(uint32_t *)&M[addr] = data;
+  }
+}
+
+static void store_byte(uint32_t addr, uint8_t data) {
+  if (addr >= VGA_BASE && addr < VGA_BASE + VGA_SIZE) {
+    ((uint8_t *)vga_fb)[addr - VGA_BASE] = data;
+  } else if (addr < MSIZE) {
+    M[addr] = data;
+  }
+}
+
+static uint32_t load_word(uint32_t addr) {
+  if (addr >= VGA_BASE && addr + 4 <= VGA_BASE + VGA_SIZE) {
+    return vga_fb[(addr - VGA_BASE) / 4];
+  }
+  if (addr + 4 <= MSIZE) {
+    return *(uint32_t *)&M[addr];
+  }
+  return 0;
+}
+
+static uint8_t load_byte(uint32_t addr) {
+  if (addr >= VGA_BASE && addr < VGA_BASE + VGA_SIZE) {
+    return ((uint8_t *)vga_fb)[addr - VGA_BASE];
+  }
+  if (addr < MSIZE) {
+    return M[addr];
+  }
+  return 0;
+}
 
 void load_mem(const char *path) {
+  memset(vga_fb, 0, sizeof(vga_fb));
   FILE *fp = fopen(path, "rb");
   Perror(fp != NULL, "Fail to open %s", path);
   int ret = fseek(fp, 0, SEEK_END);
@@ -18,11 +56,10 @@ void load_mem(const char *path) {
   fclose(fp);
 }
 
-#define HALT_ADDR 0x224
 #define EBREAK_INST 0x00100073
 
-void patch_halt_ebreak(void) {
-  *(uint32_t *)&M[HALT_ADDR] = EBREAK_INST;
+void patch_halt_ebreak(uint32_t halt_addr) {
+  *(uint32_t *)&M[halt_addr] = EBREAK_INST;
 }
 // simple test case for addi/jalr
 //uint8_t M[MSIZE] = { 
@@ -74,7 +111,6 @@ int inst_cycle() {
   S_imm = (S_imm << 20) >> 20;
   uint32_t I_addr = R[inst.I.rs1] + I_imm;
   uint32_t S_addr = R[inst.S.rs1] + S_imm;
-  uint32_t* S_mem = (uint32_t*)&M[S_addr];
   switch (inst.bytes & 0x7f) {
     case 0b0110011: // add(R)
       if (inst.R.rd != 0)
@@ -94,10 +130,10 @@ int inst_cycle() {
     case 0b0000011: // lw/lbu(I)
       switch (inst.I.funct3) {
         case 0b010: // lw
-          R[inst.I.rd] = *(uint32_t*)&M[I_addr];
+          R[inst.I.rd] = load_word(I_addr);
           break;
         case 0b100: // lbu
-          R[inst.I.rd] = M[I_addr];
+          R[inst.I.rd] = load_byte(I_addr);
           break;
         default: printf("Unsupported instruction\n"); break;
       }
@@ -108,10 +144,10 @@ int inst_cycle() {
     case 0b0100011: // sw/sb(S)
       switch (inst.S.funct3) {
         case 0b010: // sw
-          *S_mem = R[inst.S.rs2];
+          store_word(S_addr, R[inst.S.rs2]);
           break;
         case 0b000: // sb
-          M[S_addr] = R[inst.S.rs2];
+          store_byte(S_addr, R[inst.S.rs2]);
           break;
         default: printf("Unsupported instruction\n"); break;
       }
