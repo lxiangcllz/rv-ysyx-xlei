@@ -79,7 +79,7 @@ static void cycle(Circuit *c) {
 		c->count_next = c->count >= 500000 ? 0 : c->count + 1;
 		c->count_update = 1;
 	}
-	if (c->led_udpate) {
+	if (c->led_update) {
 		c->led = c->led_next;
 	}
 	if (c->count_update) {

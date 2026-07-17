@@ -1,0 +1,6 @@
+default: Vtop
+
+include Vtop.mk
+
+CPPFLAGS += -MMD -MP
+CPPFLAGS += -DVL_DEBUG=1
