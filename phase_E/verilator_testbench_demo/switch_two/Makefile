@@ -5,9 +5,9 @@ VERILATOR_FLAGS += --build
 VERILATOR_FLAGS += --trace
 VERILATOR_FLAGS += -j 0
 VERILATOR_FLAGS += -Wall
-#VERILATOR_FLAGS += --gdbbt
+VERILATOR_FLAGS += -CFLAGS -ggdb -LDFLAGS -ggdb
 
-VERILATOR_INPUT = switch.sv sim_main.cpp
+VERILATOR_INPUT = vsrc/switch.sv csrc/sim_main.cpp
 
 default: run
 
@@ -23,4 +23,4 @@ show-wave: run
 	gtkwave logs/waveform.vcd	
 
 clean:
-	-rm -rf ./obj_dir
+	-rm -rf ./obj_dir ./logs
