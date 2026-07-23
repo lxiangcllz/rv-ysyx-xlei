@@ -1,4 +1,15 @@
-MODULE=alu
+MODULE = alu
+
+VERILATOR = verilator
+VERILATOR_FLAGS = --cc --exe
+VERILATOR_FLAGS += --trace
+VERILATOR_FLAGS += --x-assign unique --x-initial unique
+VERILATOR_FLAGS += -Wall
+VERILATOR_FLAGS += -CFLAGS -ggdb -LDFLAGS -ggdb
+
+VSRCS = $(MODULE).sv
+CSRCS = tb_$(MODULE).cpp
+INPUT_FILES = $(VSRCS) $(CSRCS)
 
 .PHONY:sim
 sim: waveform.vcd
@@ -25,14 +36,14 @@ waveform.vcd: ./obj_dir/V$(MODULE)
 	@echo "### BUILDING SIM ###"
 	make -C obj_dir -f V$(MODULE).mk V$(MODULE)
 
-.stamp.verilate: $(MODULE).sv tb_$(MODULE).cpp
+.stamp.verilate: $(INPUT_FILES)
 	@echo
 	@echo "### VERILATING ###"
-	verilator -Wall --trace --x-assign unique --x-initial unique -cc $(MODULE).sv --exe tb_$(MODULE).cpp -CFLAGS -ggdb -LDFLAGS -ggdb
+	$(VERILATOR) $(VERILATOR_FLAGS) $(INPUT_FILES)
 	@touch .stamp.verilate
 
 .PHONY:lint
-lint: $(MODULE).sv
+lint: $(VSRCS)
 	verilator --lint-only $^
 
 .PHONY: clean

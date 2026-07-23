@@ -1,9 +1,7 @@
-#include <stdlib.h>
 #include <iostream>
-#include <verilated.h>
-#include <verilated_vcd_c.h>
 #include "Valu.h"
 #include "Valu___024unit.h"
+#include "../common/verilator_tb.hpp"
 
 #define MAX_SIM_TIME 300
 #define VERIF_START_TIME 7
@@ -44,20 +42,14 @@ void check_out_valid(Valu *dut, const uint64_t &sim_time) {
 }
 
 int main(int argc, char** argv, char** env) {
-	srand(time(NULL));
-	const std::unique_ptr<VerilatedContext> contextp{new VerilatedContext};
-	contextp->commandArgs(argc, argv);
-	contextp->traceEverOn(true);
-	const std::unique_ptr<Valu> dut{new Valu{contextp.get()}};
-
-	const std::unique_ptr<VerilatedVcdC> m_trace{new VerilatedVcdC};
-	dut->trace(m_trace.get(), 5);
-	m_trace->open("waveform.vcd");
+  VerilatorTb<Valu> sim(argc, argv);
+  Valu* dut = sim.dut();
+  VerilatedContext* contextp = sim.context();
 
 	uint64_t posedge_cnt = 0;
 	uint64_t curtime = contextp->time();
 	while (curtime < MAX_SIM_TIME) {
-		dut_reset(dut.get(), curtime);
+		dut_reset(dut, curtime);
 
 		dut->clk ^= 1;
 		dut->eval();
@@ -88,13 +80,12 @@ int main(int argc, char** argv, char** env) {
 						std::cout << "Subtraction failed @ " << curtime << std::endl;
 					break;
 			}
-			check_out_valid(dut.get(), curtime);
+			check_out_valid(dut, curtime);
 		}
-		m_trace->dump(curtime);
+    sim.trace()->dump(curtime);
 		contextp->timeInc(1);
 		curtime = contextp->time();
 	}
 
-	m_trace->close();
 	return 0;
 }
