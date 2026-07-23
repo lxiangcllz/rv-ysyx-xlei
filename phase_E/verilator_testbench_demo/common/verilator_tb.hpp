@@ -11,17 +11,20 @@ template <typename TDut>
 class VerilatorTb {
 public:
   VerilatorTb(int argc, char** argv,
+              bool enable_trace = true,
               const char* vcd_path = "waveform.vcd",
               int trace_depth = 5) 
     : context_{new VerilatedContext}
     , dut_{new TDut{context_.get()}}
-    , trace_{new VerilatedVcdC} 
+    , trace_{enable_trace ? new VerilatedVcdC : nullptr} 
   {
     srand(time(nullptr));
     context_->commandArgs(argc, argv);
-    context_->traceEverOn(true);
-    dut_->trace(trace_.get(), trace_depth);
-    trace_->open(vcd_path);
+    if (enable_trace) {
+      context_->traceEverOn(true);
+      dut_->trace(trace_.get(), trace_depth);
+      trace_->open(vcd_path);
+    }
   }
 
   ~VerilatorTb() {

@@ -1,5 +1,11 @@
 MODULE = alu
 
+BUILD_DIR = build
+OBJ_DIR = $(BUILD_DIR)/obj_dir
+SIM = $(OBJ_DIR)/V$(MODULE)
+VCD = $(BUILD_DIR)/waveform.vcd
+STAMP = $(BUILD_DIR)/.stamp.verilate
+
 VERILATOR = verilator
 VERILATOR_FLAGS = --cc --exe
 VERILATOR_FLAGS += --trace
@@ -11,43 +17,33 @@ VSRCS = $(MODULE).sv
 CSRCS = tb_$(MODULE).cpp
 INPUT_FILES = $(VSRCS) $(CSRCS)
 
-.PHONY:sim
-sim: waveform.vcd
+.PHONY:sim verilate compile waves lint clean
+sim: $(VCD)
 
-.PHONY:verilate
-verilate: .stamp.verilate
+compile: $(SIM)
 
-.PHONY:build
-build: obj_dir/Valu
-
-.PHONY:waves
-waves: waveform.vcd
-	@echo
-	@echo "### WAVES ###"
+waves: $(VCD)
 	gtkwave $^
 
-waveform.vcd: ./obj_dir/V$(MODULE)
+$(VCD): $(SIM)
 	@echo
 	@echo "### SIMULATING ###"
-	@$^ +verilator+rand+reset+2
+	@cd $(BUILD_DIR) && $(abspath $(SIM)) +verilator+rand+reset+2
 
-./obj_dir/V$(MODULE): .stamp.verilate
+$(SIM): $(STAMP)
 	@echo
 	@echo "### BUILDING SIM ###"
-	make -C obj_dir -f V$(MODULE).mk V$(MODULE)
+	make -C $(OBJ_DIR) -f V$(MODULE).mk V$(MODULE)
 
-.stamp.verilate: $(INPUT_FILES)
+$(STAMP): $(INPUT_FILES)
+	@mkdir -p $(OBJ_DIR)
 	@echo
 	@echo "### VERILATING ###"
-	$(VERILATOR) $(VERILATOR_FLAGS) $(INPUT_FILES)
-	@touch .stamp.verilate
+	$(VERILATOR) $(VERILATOR_FLAGS) --Mdir $(OBJ_DIR) $(INPUT_FILES)
+	@touch $(STAMP)
 
-.PHONY:lint
 lint: $(VSRCS)
 	verilator --lint-only $^
 
-.PHONY: clean
 clean:
-	rm -rf .stamp.*;
-	rm -rf ./obj_dir
-	rm -rf waveform.vcd
+	rm -rf $(BUILD_DIR)

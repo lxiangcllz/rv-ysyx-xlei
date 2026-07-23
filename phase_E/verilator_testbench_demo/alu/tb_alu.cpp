@@ -82,7 +82,8 @@ int main(int argc, char** argv, char** env) {
 			}
 			check_out_valid(dut, curtime);
 		}
-    sim.trace()->dump(curtime);
+    if (VerilatedVcdC* t = sim.trace())
+      t->dump(curtime);
 		contextp->timeInc(1);
 		curtime = contextp->time();
 	}
