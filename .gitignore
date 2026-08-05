@@ -1,0 +1,34 @@
+# ===== Verilator / 仿真 =====
+obj_dir/
+build/
+logs/
+result/
+*.vcd
+*.fst
+*.vpd
+*.dmp
+coverage.dat
+core
+
+# ===== C / C++ 编译产物 =====
+*.o
+*.a
+*.out
+a.out
+*.dSYM/
+
+# ===== 编译器中间文件 (llvm/clang 实验) =====
+*.ll
+*.s
+lex_tokens.txt
+ast.json
+
+# ===== IDE / 语言服务器缓存 =====
+.cache/
+.vim/
+
+# ===== 编辑器 / 系统 =====
+*~
+*.swp
+*.swo
+.DS_Store
