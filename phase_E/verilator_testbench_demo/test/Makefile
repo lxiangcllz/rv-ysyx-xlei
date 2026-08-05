@@ -1,5 +1,5 @@
-TEST_DIR      := /home/xl/mywork/digital_design/ysyx/rv-ysyx-xlei/phase_E/verilator_testbench_demo/test
-REG_FILE      := /home/xl/mywork/digital_design/ysyx/rv-ysyx-xlei/phase_E/verilator_testbench_demo/non_behav_template/Reg.sv
+TEST_DIR      := `pwd`
+REG_FILE      := $(TEST_DIR)/../non_behav_template/Reg.sv
 RESULT_DIR    := $(TEST_DIR)/result
 YOSYS_STA     := /home/xl/3rdparty/yosys-sta
 CLK_FREQ_MHZ  ?= 500
