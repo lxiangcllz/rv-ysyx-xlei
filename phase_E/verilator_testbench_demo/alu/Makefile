@@ -6,12 +6,15 @@ SIM = $(OBJ_DIR)/V$(MODULE)
 VCD = $(BUILD_DIR)/waveform.vcd
 STAMP = $(BUILD_DIR)/.stamp.verilate
 
+COMMON_DIR = $(abspath ../common)
+
 VERILATOR = verilator
 VERILATOR_FLAGS = --cc --exe
 VERILATOR_FLAGS += --trace
 VERILATOR_FLAGS += --x-assign unique --x-initial unique
 VERILATOR_FLAGS += -Wall
 VERILATOR_FLAGS += -CFLAGS -ggdb -LDFLAGS -ggdb
+VERILATOR_FLAGS += -CFLAGS -I$(COMMON_DIR)
 
 VSRCS = $(MODULE).sv
 CSRCS = tb_$(MODULE).cpp

@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Valu.h"
 #include "Valu___024unit.h"
-#include "../common/verilator_tb.hpp"
+#include "verilator_tb.hpp"
 
 #define MAX_SIM_TIME 300
 #define VERIF_START_TIME 7
