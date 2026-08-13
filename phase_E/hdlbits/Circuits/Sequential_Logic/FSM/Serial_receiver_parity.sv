@@ -1,89 +1,95 @@
 module Serial_receiver_parity(
-  input clk, in, reset, 
-  output [7:0] out_byte,
-  output done
+  input  clk,
+  input  in,
+  input  reset,   // synchronous reset
+  output done,
+  output [7:0] out_byte
 );
 
-  typedef enum logic [3:0] { idle = 4'd0, start = 4'd1, trans0 = 4'd2, trans1 = 4'd3,
-                             trans2 = 4'd4, trans3 = 4'd5, trans4 = 4'd6, trans5 = 4'd7,
-                             trans6 = 4'd8, trans7 = 4'd9, stop = 4'd10, err = 4'd11, pari = 4'd12 
-                             } State;
+  typedef enum logic [2:0] {
+    S_idle = 3'd0, S_recv = 3'd1, S_pari = 3'd2,
+    S_stop = 3'd3, S_stop_err = 3'd4, S_err = 3'd5
+  } State;
+
   State state, next_state;
+  reg load_bit, parity_en;
   reg [7:0] data;
-  reg odd, reset_p;
-  reg done_reg;
+  reg parity_check;
+  reg clr_cnt, done_r;
+  reg [3:0] bit_cnt;
 
-  always @(*) begin
-    case (state)
-      idle:   next_state <= in ? idle : start;
-      start:  next_state <= trans0;
-      trans0: next_state <= trans1;
-      trans1: next_state <= trans2;
-      trans2: next_state <= trans3;
-      trans3: next_state <= trans4;
-      trans4: next_state <= trans5;
-      trans5: next_state <= trans6;
-      trans6: next_state <= trans7;
-      trans7: next_state <= pari;
-      pari:   next_state <= in ? idle : err;
-      err:    next_state <= in ? idle : err;
-    endcase
-  end
-
-  always @(posedge clk) begin
+  always_ff @(posedge clk) begin
     if (reset)
-      state <= idle;
+      state <= S_idle;
     else
       state <= next_state;
   end
 
-  // New: Add parity checking.
-  always @(posedge clk) begin
-    if (reset) begin
-      data <= 8'd0;
-      reset_p <= 1'b1;
-      done_reg <= 1'b0;
+  always_comb begin
+    load_bit = 1'b0; parity_en = 1'b0;
+    clr_cnt = 1'b0; done_r = 1'b0;
+    next_state = S_idle;
+    case (state)
+      S_idle: begin
+        clr_cnt = 1'b1;
+        next_state = in ? S_idle : S_recv;
+      end
+      S_recv: begin
+        parity_en = 1'b1;
+        if (bit_cnt != 8) begin
+          load_bit = 1'b1;
+          next_state = S_recv;
+        end
+        else begin
+          next_state = S_pari;
+        end
+      end
+      S_pari: begin
+        parity_en = 1'b1;
+        if (in)
+          next_state = parity_check ? S_stop : S_stop_err;
+        else
+          next_state = S_err;
+      end
+      S_stop: begin
+        done_r = 1'b1;
+        clr_cnt = 1'b1;
+        next_state = in ? S_idle : S_recv;
+      end
+      S_stop_err: begin
+        clr_cnt = 1'b1;
+        next_state = in ? S_idle : S_recv;
+      end
+      S_err:
+        next_state = in ? S_idle : S_err;
+      default:;
+    endcase
+  end
+ 
+  always_ff @(posedge clk) begin
+    if (load_bit) begin
+      data <= {in, data[7:1]};
+      bit_cnt <= bit_cnt + 3'b1;
     end
-    else begin
-      if (next_state == trans0 || 
-          next_state == trans1 || 
-          next_state == trans2 || 
-          next_state == trans3 ||
-          next_state == trans4 ||
-          next_state == trans5 ||
-          next_state == trans6 || 
-          next_state == trans7
-          ) begin
-            data <= {in, data[7:1]};
-      end
-      else if (next_state == start) begin
-        data <= 8'd0;
-        reset_p <= 1'b0;
-        done_reg <= 1'b0;
-      end
-      else if (next_state == idle) begin
-        done_reg <= odd;
-      end
-      else if (next_state == pari) begin
-        reset_p <= 1'b1;
-      end
-    end
+    if (clr_cnt)
+      bit_cnt <= 4'd0;
   end
 
-  assign done = done_reg;
-  assign out_byte = done ? data : 8'd0;
-  parity par_mod(clk, reset | reset_p, in, odd);
+  parity inst(clk, reset | !parity_en, in, parity_check);
 
+  assign done = done_r;
+  assign out_byte = done ? data : 8'd0;
 endmodule
 
 
+/* verilator lint_off DECLFILENAME */
 module parity(
-  input clk, reset, in,
+  input clk, rst, in,
   output reg odd
 );
-  always @(posedge clk)
-    if (reset)
+  always_ff @(posedge clk)
+    if (rst)
       odd <= 1'b0;
-    else if (in)
-      odd <= ~odd;
+    else
+      odd <= odd ^ in;
 endmodule

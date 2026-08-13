@@ -1,76 +1,68 @@
 module Serial_receiver(
-  input clk, in, reset,
+  input  clk,
+  input  in,
+  input  reset,   // synchronous reset
   output done,
-  output reg [7:0] out_byte
+  output [7:0] out_byte
 );
 
-  typedef enum logic [1:0] { S_idle = 2'b00, S1 = 2'b01, S2 = 2'b10, S_err = 2'b11 } State;
-  State state, next_state;
-  reg [3:0] cnt;
-  wire in0 = (in == 1'b0);
-  wire in1 = (in == 1'b1);
-  wire cnt_less_8 = (cnt < 4'd8);
-  reg clr_cnt, incr_cnt;
-  reg [7:0] data;
+  typedef enum logic [1:0] {
+    S_idle = 2'd0, S_recv = 2'd1,
+    S_stop = 2'd2, S_err = 2'd3
+  } State;
 
-  always_ff @(posedge clk)
+  State state, next_state;
+  reg [7:0] data;
+  reg load_bit, clr_cnt, done_r;
+  reg [3:0] bit_cnt;
+
+  always_ff @(posedge clk) begin
     if (reset)
       state <= S_idle;
     else
       state <= next_state;
+  end
 
-  always @* begin
-    next_state = S_idle; clr_cnt = 1'b0; incr_cnt = 1'b0;
+  always_comb begin
+    load_bit = 1'b0; clr_cnt = 1'b0; done_r = 1'b0;
+    next_state = S_idle;
     case (state)
       S_idle: begin
         clr_cnt = 1'b1;
-        if (in0)
-          next_state = S1;
-        else
+        if (in) 
           next_state = S_idle;
+        else
+          next_state = S_recv;
       end
-      S1: begin
-        if (cnt_less_8) begin
-          data[cnt] = in;
-          next_state = S1;
-          incr_cnt = 1'b1;
+      S_recv: begin
+        if (bit_cnt != 8) begin
+          load_bit = 1'b1;
+          next_state = S_recv;
         end
-        else if (in1)
-          next_state = S2;
+        else if (in)
+          next_state = S_stop;
         else
           next_state = S_err;
       end
-      S2: begin
+      S_stop: begin 
+        done_r = 1'b1;
         clr_cnt = 1'b1;
-        out_byte = data;
-        if (in1)
-          next_state = S_idle;
-        else
-          next_state = S1;
+        next_state = in ? S_idle : S_recv;
       end
-      S_err: begin
-        clr_cnt = 1'b1;
-        if (in1)
-          next_state = S_idle;
-        else
-          next_state = S_err;
-      end
+      S_err: next_state = in ? S_idle : S_err;
     endcase
   end
-
-
+  
   always_ff @(posedge clk) begin
-    if (reset) begin
-      cnt <= 4'd0;
+    if (load_bit) begin
+      data <= {in, data[7:1]};
+      bit_cnt <= bit_cnt + 3'b1;
     end
-    else begin
-      if (incr_cnt)
-        cnt <= cnt + 4'd1;
-      else if (clr_cnt)
-        cnt <= 4'd0;
-    end
+    if (clr_cnt)
+      bit_cnt <= 4'd0;
   end
 
-  assign done = (state == S2);
+  assign done = done_r;
+  assign out_byte = done ? data : 8'd0;
 
 endmodule
