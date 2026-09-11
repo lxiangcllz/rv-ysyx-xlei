@@ -105,10 +105,10 @@ typedef union {
 
 int inst_cycle() {
   inst_t inst = *(inst_t *)&M[PC];
-  int32_t I_imm = (int32_t)inst.bytes >> 20;
+  int32_t I_imm = (int32_t)(inst.I.imm << 20) >> 20;
   uint32_t U_imm = inst.U.imm << 12;
-  int32_t S_imm = (int32_t)(((inst.bytes >> 25) << 5) | ((inst.bytes >> 7) & 0x1f));
-  S_imm = (S_imm << 20) >> 20;
+  int32_t S_raw = (int32_t)((inst.S.imm11_5 << 5) | inst.S.imm4_0);
+  int32_t S_imm = (S_raw << 20) >> 20;
   uint32_t I_addr = R[inst.I.rs1] + I_imm;
   uint32_t S_addr = R[inst.S.rs1] + S_imm;
   switch (inst.bytes & 0x7f) {

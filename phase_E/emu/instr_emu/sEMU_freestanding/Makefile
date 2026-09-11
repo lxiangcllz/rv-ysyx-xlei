@@ -3,7 +3,7 @@ a.bin: a.txt
 hexdump: a.bin
 comp: hexdump sEMU.c
 	gcc sEMU.c -g
-exe: a.out a.bin
+exe: comp
 	./a.out a.bin 10
 
 
