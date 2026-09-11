@@ -22,7 +22,7 @@ module Lemmings(
   output walk_left, walk_right
 );
   parameter WALK_LEFT = 1'b0, WALK_RIGHT = 1'b1;
-  reg state, next_state, aaah_tmp;
+  reg state, next_state;
   always_ff @(posedge clk, posedge areset) begin
     if (areset)
       state <= WALK_LEFT;
