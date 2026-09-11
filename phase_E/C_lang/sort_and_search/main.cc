@@ -10,7 +10,7 @@ void print_arr(int *arr, int len) {
 }
 
 void insertion_sort(int *arr, int start, int end) {
-  for (int i = 1; i <= end; i++) {
+  for (int i = start+1; i <= end; i++) {
     int pivot = arr[i];
     int j = i - 1;
     while (j >= start && arr[j] > pivot) {
@@ -59,27 +59,47 @@ void merge_sort(int *arr, int start, int end) {
 }
 
 
-int partition(int *arr, int start, int end) {
-  int pivot = arr[start];
+int partition2(int *arr, int start, int end) {
+  int mid = (start + end) / 2;
+  int pivot = arr[mid];
+  std::swap(arr[mid], arr[end]);
   int smaller = start;
-  int key = start;
-  for (int i = start+1; i <= end; i++) {
+  for (int i = start; i < end; i++) {
     if (arr[i] < pivot) {
       std::swap(arr[i], arr[smaller]);
-      key = i;
       smaller++;
     }
   }
-  std::swap(arr[key], arr[smaller]);
+  std::swap(arr[end], arr[smaller]);
+  return smaller;
+}
+void quick_sort2(int *arr, int start, int end) {
+  if (start < end) {
+    int mid = partition2(arr, start, end);
+    quick_sort2(arr, start, mid-1);
+    quick_sort2(arr, mid+1, end);
+  } 
+}
+
+int partition(int *arr, int start, int end) {
+  int pivot = arr[start];
+  int smaller = start;
+  for (int i = start+1; i <= end; i++) {
+    if (arr[i] < pivot) {
+      smaller++;
+      std::swap(arr[i], arr[smaller]);
+    }
+  }
+  std::swap(arr[start], arr[smaller]);
   return smaller;
 }
 
 void quick_sort(int *arr, int start, int end) {
   if (start < end) {
     int mid = partition(arr, start, end);
-    quick_sort(arr, start, mid);
+    quick_sort(arr, start, mid-1);
     quick_sort(arr, mid+1, end);
-  } 
+  }
 }
 
 
@@ -107,6 +127,7 @@ int main() {
   //insertion_sort(arr, 0, len-1);
   //merge_sort(arr, 0, len-1);
   quick_sort(arr, 0, len-1);
+  //quick_sort2(arr, 0, len-1);
   print_arr(arr, len);
 
   int value = 6;
